@@ -9,6 +9,7 @@ import { ApplicationItem, DocumentItem, FlagItem, VerificationResultItem, Compli
 import { StatusChip, SimulatedBadge } from "@/components/ui/StatusChip";
 import { ProcessingStatusRow } from "@/features/processing/ProcessingStatusRow";
 import { ExtractedInfoViewer } from "@/features/extraction/ExtractedInfoViewer";
+import { ValidationView } from "@/features/validation/ValidationView";
 import {
   FileText,
   Clock,
@@ -307,6 +308,17 @@ export default function ApplicationDetailPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB 4: DOCUMENT VALIDATION MATRIX */}
+      {activeTab === "validation" && (
+        <ValidationView
+          applicationId={application.id}
+          onSelectDocumentForViewer={(docId) => {
+            setSelectedDocId(docId);
+            setActiveTab("extraction");
+          }}
+        />
       )}
 
       {/* TAB 2: OCR & PIPELINE PROCESSING */}
