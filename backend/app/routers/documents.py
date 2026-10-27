@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 import imagehash
@@ -10,13 +10,14 @@ import fitz
 
 from backend.app.core.database import get_db
 from backend.app.core.config import settings
-from backend.app.core.permissions import get_current_user, verify_institution_access
+from backend.app.core.permissions import get_current_user, require_official, verify_institution_access
 from backend.app.models.user import User
 from backend.app.models.application import Application
-from backend.app.models.document import Document
-from backend.app.schemas.document import DocumentOut
+from backend.app.models.document import Document, ExtractedField
+from backend.app.schemas.document import DocumentOut, ExtractedFieldOut, FieldUpdate
 from backend.app.services.file_validation import validate_and_save_upload
 from backend.app.services.audit import record_audit_event
+from backend.app.pipeline.orchestrator import process_document_pipeline
 
 router = APIRouter(tags=["Documents"])
 
@@ -43,6 +44,7 @@ def compute_phash_for_file(stored_path: str, mime_type: str) -> Optional[str]:
 @router.post("/applications/{application_id}/documents", response_model=DocumentOut)
 async def upload_document(
     application_id: int,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     doc_type: str = Form(...),
     current_user: User = Depends(get_current_user),
@@ -96,7 +98,89 @@ async def upload_document(
         }
     )
 
+    # Trigger async processing pipeline
+    background_tasks.add_task(process_document_pipeline, document.id)
+
     return document
+
+@router.post("/documents/{document_id}/reprocess", response_model=DocumentOut)
+def reprocess_document(
+    document_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    verify_institution_access(current_user, document.application.institution_id)
+
+    document.processing_status = "queued"
+    document.processing_stage = "Queued for Reprocessing"
+    document.processing_error = None
+    db.commit()
+
+    record_audit_event(
+        db=db,
+        action="document_reprocess_triggered",
+        entity_type="document",
+        entity_id=document.id,
+        actor=current_user,
+        after_state={"processing_status": "queued"}
+    )
+
+    background_tasks.add_task(process_document_pipeline, document.id)
+    return document
+
+@router.get("/applications/{application_id}/documents-detailed", response_model=list[DocumentOut])
+def get_application_documents_detailed(
+    application_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+
+    verify_institution_access(current_user, application.institution_id)
+
+    docs = db.query(Document).filter(
+        Document.application_id == application.id,
+        Document.superseded_by.is_(None)
+    ).all()
+    return docs
+
+@router.patch("/extracted-fields/{field_id}", response_model=ExtractedFieldOut)
+def correct_extracted_field(
+    field_id: int,
+    payload: FieldUpdate,
+    current_user: User = Depends(require_official),
+    db: Session = Depends(get_db)
+):
+    """Officials can correct low-confidence or wrongly extracted values with mandatory audit logging."""
+    field = db.query(ExtractedField).filter(ExtractedField.id == field_id).first()
+    if not field:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Extracted field not found")
+
+    before_val = field.edited_value if field.edited_value is not None else field.value
+    field.edited_value = payload.value
+    field.edited_by = current_user.id
+    field.needs_review = False
+
+    record_audit_event(
+        db=db,
+        action="field_corrected_by_official",
+        entity_type="extracted_field",
+        entity_id=field.id,
+        actor=current_user,
+        before_state={"value": before_val},
+        after_state={"edited_value": payload.value, "remarks": payload.remarks}
+    )
+
+    db.commit()
+    db.refresh(field)
+    return field
 
 @router.delete("/documents/{document_id}")
 def delete_document(
@@ -117,7 +201,6 @@ def delete_document(
             detail="Documents can only be deleted while application is in 'draft' status."
         )
 
-    # Mark audit before deleting
     record_audit_event(
         db=db,
         action="document_deleted",
@@ -127,7 +210,6 @@ def delete_document(
         before_state={"filename": document.original_filename, "doc_type": document.doc_type}
     )
 
-    # Delete row (file in storage remains for forensic record or gets cleaned)
     db.delete(document)
     db.commit()
 
@@ -168,12 +250,12 @@ def get_document_page_image(
     verify_institution_access(current_user, document.application.institution_id)
 
     derived_dir = Path(settings.DERIVED_DIR)
+    derived_dir.mkdir(parents=True, exist_ok=True)
     cached_page_path = derived_dir / f"doc_{document.id}_page_{page_number}.png"
 
     if cached_page_path.exists():
         return FileResponse(path=str(cached_page_path), media_type="image/png")
 
-    # Render page on the fly
     if not os.path.exists(document.stored_path):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stored file not found")
 
