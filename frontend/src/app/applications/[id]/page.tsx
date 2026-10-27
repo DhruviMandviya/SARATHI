@@ -10,6 +10,7 @@ import { StatusChip, SimulatedBadge } from "@/components/ui/StatusChip";
 import { ProcessingStatusRow } from "@/features/processing/ProcessingStatusRow";
 import { ExtractedInfoViewer } from "@/features/extraction/ExtractedInfoViewer";
 import { ValidationView } from "@/features/validation/ValidationView";
+import { FraudSignalsView } from "@/features/fraud/FraudSignalsView";
 import {
   FileText,
   Clock,
@@ -318,6 +319,14 @@ export default function ApplicationDetailPage() {
             setSelectedDocId(docId);
             setActiveTab("extraction");
           }}
+        />
+      )}
+
+      {/* TAB 5: FRAUD & FORENSICS SIGNALS */}
+      {activeTab === "fraud" && (
+        <FraudSignalsView
+          applicationId={application.id}
+          documents={documents}
         />
       )}
 
