@@ -1,0 +1,120 @@
+[
+  {
+    "rule_key": "min_land_area",
+    "name": "Minimum Campus Land Area Requirement",
+    "clause": "Clause 4.1, Appendix 4",
+    "source": "AICTE Approval Process Handbook (Reference Draft)",
+    "program": "Engineering & Technology (UG)",
+    "parameters": {
+      "field": "land_area_acres",
+      "min_value": 2.5,
+      "unit": "acres"
+    },
+    "check_type": "min_value",
+    "version": 1,
+    "active": true,
+    "verified_against_handbook": false,
+    "on_missing_data": "needs_review"
+  },
+  {
+    "rule_key": "faculty_student_ratio",
+    "name": "Faculty-to-Student Cadre Ratio",
+    "clause": "Clause 7.1, Appendix 7",
+    "source": "AICTE Approval Process Handbook (Reference Draft)",
+    "program": "Engineering & Technology (UG)",
+    "parameters": {
+      "field": "student_faculty_ratio",
+      "max_ratio": 20.0,
+      "standard": "1:20"
+    },
+    "check_type": "ratio_max",
+    "version": 1,
+    "active": true,
+    "verified_against_handbook": false,
+    "on_missing_data": "needs_review"
+  },
+  {
+    "rule_key": "min_built_up_area",
+    "name": "Instructional & Administrative Built-up Area",
+    "clause": "Clause 4.2, Appendix 4",
+    "source": "AICTE Approval Process Handbook (Reference Draft)",
+    "program": "Engineering & Technology (UG)",
+    "parameters": {
+      "field": "built_up_area_sqm",
+      "min_value": 4000.0,
+      "unit": "sq.m"
+    },
+    "check_type": "min_value",
+    "version": 1,
+    "active": true,
+    "verified_against_handbook": false,
+    "on_missing_data": "needs_review"
+  },
+  {
+    "rule_key": "min_laboratories",
+    "name": "Core Curriculum Laboratories Count",
+    "clause": "Clause 6.3, Appendix 6",
+    "source": "AICTE Approval Process Handbook (Reference Draft)",
+    "program": "Engineering & Technology (UG)",
+    "parameters": {
+      "field": "labs_count",
+      "min_value": 10
+    },
+    "check_type": "min_value",
+    "version": 1,
+    "active": true,
+    "verified_against_handbook": false,
+    "on_missing_data": "needs_review"
+  },
+  {
+    "rule_key": "ews_quota",
+    "name": "Economically Weaker Section (EWS) Supernumerary Quota",
+    "clause": "Clause 1.4.3, Chapter I",
+    "source": "AICTE Approval Process Handbook (Reference Draft)",
+    "program": "All Programs",
+    "parameters": {
+      "field": "ews_quota_percentage",
+      "min_value": 10.0,
+      "unit": "%"
+    },
+    "check_type": "min_value",
+    "version": 1,
+    "active": true,
+    "verified_against_handbook": false,
+    "on_missing_data": "needs_review"
+  },
+  {
+    "rule_key": "corpus_fund",
+    "name": "Joint Fixed Deposit / Corpus Fund Reserve",
+    "clause": "Clause 4.6, Chapter IV",
+    "source": "AICTE Approval Process Handbook (Reference Draft)",
+    "program": "New Institutions",
+    "parameters": {
+      "field": "corpus_fund_lakhs",
+      "min_value": 100.0,
+      "unit": "Lakhs INR"
+    },
+    "check_type": "min_value",
+    "version": 1,
+    "active": true,
+    "verified_against_handbook": false,
+    "on_missing_data": "needs_review"
+  },
+  {
+    "rule_key": "affidavit_stamp",
+    "name": "Standard Format Affidavit Stamp Paper Value",
+    "clause": "Clause 2.1, Appendix 2",
+    "source": "AICTE Approval Process Handbook (Reference Draft)",
+    "program": "All Programs",
+    "parameters": {
+      "field": "affidavit_stamp_value_inr",
+      "min_value": 100.0,
+      "unit": "INR"
+    },
+    "check_type": "min_value",
+    "version": 1,
+    "active": true,
+    "verified_against_handbook": false,
+    "on_missing_data": "needs_review"
+  }
+]

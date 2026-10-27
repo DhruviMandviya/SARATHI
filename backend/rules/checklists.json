@@ -1,0 +1,44 @@
+[
+  {
+    "application_type": "New Technical Institution",
+    "doc_type": "land_document",
+    "mandatory": 1,
+    "validity_required": 0,
+    "description": "Registered Sale Deed / Gift Deed / 30-year Government Lease Deed for institution campus land"
+  },
+  {
+    "application_type": "New Technical Institution",
+    "doc_type": "building_plan",
+    "mandatory": 1,
+    "validity_required": 0,
+    "description": "Competent Municipal/Town Planning Authority Sanctioned Building Plan"
+  },
+  {
+    "application_type": "New Technical Institution",
+    "doc_type": "fire_noc",
+    "mandatory": 1,
+    "validity_required": 1,
+    "description": "Valid Fire Safety Clearance / No Objection Certificate from State Fire Department"
+  },
+  {
+    "application_type": "New Technical Institution",
+    "doc_type": "society_registration",
+    "mandatory": 1,
+    "validity_required": 0,
+    "description": "Certificate of Registration of Society / Public Trust / Section 8 Company"
+  },
+  {
+    "application_type": "New Technical Institution",
+    "doc_type": "affidavit",
+    "mandatory": 1,
+    "validity_required": 0,
+    "description": "AICTE Prescribed Format Affidavit on non-judicial stamp paper duly notarized"
+  },
+  {
+    "application_type": "New Technical Institution",
+    "doc_type": "env_clearance",
+    "mandatory": 0,
+    "validity_required": 1,
+    "description": "State Pollution Control Board / Environmental Clearance Consent (Optional/Categorical)"
+  }
+]

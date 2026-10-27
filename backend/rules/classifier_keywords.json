@@ -1,0 +1,127 @@
+{
+  "land_document": {
+    "name": "Land Title / Ownership / Lease Document",
+    "keywords": [
+      "sale deed",
+      "lease deed",
+      "gift deed",
+      "sub-registrar",
+      "survey no",
+      "survey number",
+      "khasra",
+      "patta",
+      "conveyance deed",
+      "land title",
+      "schedule of property",
+      "acres",
+      "hectares",
+      "sq.m"
+    ],
+    "patterns": [
+      "\\b(sale|lease|gift|conveyance)\\s+deed\\b",
+      "\\bsurvey\\s+no[\\.:]?\\s*\\d+",
+      "\\bregistered\\s+at\\s+sub-registrar\\b"
+    ],
+    "filename_cues": ["land", "deed", "patta", "title", "khasra", "registry"]
+  },
+  "building_plan": {
+    "name": "Sanctioned Building Plan",
+    "keywords": [
+      "sanctioned plan",
+      "building plan",
+      "floor plan",
+      "municipal corporation",
+      "town planning",
+      "competent authority",
+      "built-up area",
+      "carpet area",
+      "fsi",
+      "far",
+      "architect",
+      "sanction order"
+    ],
+    "patterns": [
+      "\\b(building|sanctioned)\\s+plan\\b",
+      "\\bcompetent\\s+authority\\b",
+      "\\bbuilt-?up\\s+area\\b"
+    ],
+    "filename_cues": ["building", "plan", "sanction", "architect", "floor"]
+  },
+  "fire_noc": {
+    "name": "Fire Safety Certificate / NOC",
+    "keywords": [
+      "fire safety",
+      "no objection certificate",
+      "fire department",
+      "fire prevention",
+      "life safety",
+      "fire fighting",
+      "chief fire officer",
+      "fire clearance",
+      "validity"
+    ],
+    "patterns": [
+      "\\b(fire\\s+safety|no\\s+objection\\s+certificate)\\b",
+      "\\bchief\\s+fire\\s+officer\\b",
+      "\\bvalid\\s+up\\s*to\\b"
+    ],
+    "filename_cues": ["fire", "noc", "safety", "cfo"]
+  },
+  "society_registration": {
+    "name": "Society / Trust Registration Certificate",
+    "keywords": [
+      "certificate of registration",
+      "societies registration act",
+      "public trust",
+      "registrar of societies",
+      "memorandum of association",
+      "section 8",
+      "trustee",
+      "registration no"
+    ],
+    "patterns": [
+      "\\bsocieties\\s+registration\\s+act\\b",
+      "\\bcertificate\\s+of\\s+registration\\b",
+      "\\bregistrar\\s+of\\s+societies\\b"
+    ],
+    "filename_cues": ["society", "trust", "registration", "moa", "charter"]
+  },
+  "affidavit": {
+    "name": "AICTE Prescribed Affidavit",
+    "keywords": [
+      "affidavit",
+      "solemnly affirm",
+      "notary public",
+      "oath commissioner",
+      "deponent",
+      "stamp paper",
+      "approval process handbook",
+      "verified at",
+      "contents of this affidavit"
+    ],
+    "patterns": [
+      "\\b(solemnly\\s+affirm|affidavit)\\b",
+      "\\bnotary\\s+public\\b",
+      "\\bdeponent\\b"
+    ],
+    "filename_cues": ["affidavit", "notary", "stamp", "undertaking"]
+  },
+  "env_clearance": {
+    "name": "Environmental Clearance / Pollution Consent",
+    "keywords": [
+      "pollution control board",
+      "consent to establish",
+      "environmental clearance",
+      "air prevention",
+      "water prevention",
+      "spcb",
+      "consent order"
+    ],
+    "patterns": [
+      "\\bpollution\\s+control\\s+board\\b",
+      "\\bconsent\\s+to\\s+establish\\b",
+      "\\benvironmental\\s+clearance\\b"
+    ],
+    "filename_cues": ["env", "environment", "pollution", "spcb", "consent"]
+  }
+}
