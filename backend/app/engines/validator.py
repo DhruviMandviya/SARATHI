@@ -34,7 +34,9 @@ EXPECTED_FIELDS_BY_DOC_TYPE = {
     "building_plan": ["built_up_area_sqm"],
     "fire_noc": ["reference_no", "validity_date"],
     "society_registration": ["registration_no"],
-    "affidavit": ["affidavit_stamp_value_inr"]
+    "affidavit": ["affidavit_stamp_value_inr"],
+    "environmental_clearance": ["reference_no"],
+    "env_clearance": ["reference_no"]
 }
 
 def validate_application_documents(
@@ -94,6 +96,34 @@ def validate_application_documents(
             continue
 
         doc_id = doc.get("id")
+        proc_status = doc.get("processing_status")
+        proc_error = doc.get("processing_error")
+
+        # Handling queued or processing document
+        if proc_status in ("queued", "processing"):
+            results.append(DocumentValidationResult(
+                doc_type=doc_type,
+                document_id=doc_id,
+                status="pending_processing",
+                remarks="Document processing in progress.",
+                flags=[],
+                missing_fields=[]
+            ))
+            continue
+
+        # Handling failed OCR / extraction failure without false regulatory rejection
+        if proc_status == "failed":
+            rem = f"Automated text extraction unavailable ({proc_error or 'OCR Unavailable'}). Manual Scrutiny Required."
+            results.append(DocumentValidationResult(
+                doc_type=doc_type,
+                document_id=doc_id,
+                status="unable_to_verify",
+                remarks=rem,
+                flags=[],
+                missing_fields=[]
+            ))
+            continue
+
         fields = extracted_fields_by_doc.get(doc_id, {})
         flags: List[Dict[str, Any]] = []
         status = "valid"
@@ -187,3 +217,54 @@ def validate_application_documents(
         ))
 
     return results
+
+def validate_single_document(
+    doc_type: str,
+    extracted_fields: Dict[str, Any],
+    declared_details: Optional[Dict[str, Any]] = None,
+    page_count: int = 1,
+    today: Optional[date] = None
+) -> List[Dict[str, Any]]:
+    """
+    Validates a single document's extracted fields and page attributes.
+    Returns list of generated validation flags.
+    """
+    check_date = today or date.today()
+    flags = []
+    expected = EXPECTED_FIELDS_BY_DOC_TYPE.get(doc_type, [])
+    missing = [f for f in expected if not extracted_fields.get(f)]
+    if missing:
+        clean_names = [f.replace("_", " ") for f in missing]
+        flags.append({
+            "category": "incomplete",
+            "severity": "warning",
+            "title": f"Incomplete Document: {doc_type}",
+            "explanation": f"Missing required fields: {', '.join(clean_names)}",
+            "evidence": {"doc_type": doc_type, "missing_fields": missing},
+            "rule_ref": f"Completeness_{doc_type}"
+        })
+
+    if "validity_date" in extracted_fields:
+        val_str = extracted_fields.get("validity_date")
+        if val_str:
+            parsed = parse_date_string(val_str)
+            if parsed:
+                try:
+                    exp = datetime.strptime(parsed, "%Y-%m-%d").date()
+                    if exp < check_date:
+                        flags.append({
+                            "category": "expired",
+                            "severity": "critical",
+                            "title": f"Document Expired: {doc_type}",
+                            "explanation": f"Validity expired on {parsed}",
+                            "evidence": {"validity_date": parsed},
+                            "rule_ref": f"Validity_{doc_type}"
+                        })
+                except ValueError:
+                    pass
+
+    return flags
+
+# Alias for backwards compatibility
+validate_document_content = validate_single_document
+

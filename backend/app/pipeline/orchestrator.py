@@ -1,9 +1,10 @@
 import os
 import traceback
 from typing import Optional, Dict, Any, List
+from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session
 
-from backend.app.core.database import SessionLocal
+from backend.app.core import database
 from backend.app.models.application import Application
 from backend.app.models.document import Document, ExtractedField
 from backend.app.models.finding import Flag
@@ -15,7 +16,7 @@ from backend.app.engines.forensics_pdf import analyze_pdf_forensics
 from backend.app.engines.duplicates import check_document_duplicates
 from backend.app.services.audit import record_audit_event
 
-def process_document_pipeline(document_id: int):
+def process_document_pipeline(document_id: int, db: Optional[Session] = None):
     """
     Synchronous / Background worker function for document processing.
     Runs:
@@ -27,7 +28,12 @@ def process_document_pipeline(document_id: int):
     6. Exact & Near Duplicate Detection with Template Awareness
     Updates Document stages for frontend polling.
     """
-    db: Session = SessionLocal()
+    import time
+    start_time = time.time()
+    owns_db = False
+    if db is None:
+        db = database.SessionLocal()
+        owns_db = True
     try:
         doc = db.query(Document).filter(Document.id == document_id).first()
         if not doc:
@@ -36,6 +42,7 @@ def process_document_pipeline(document_id: int):
         doc.processing_status = "processing"
         doc.processing_stage = "Extracting Text"
         doc.processing_error = None
+        db.query(Flag).filter(Flag.document_id == doc.id).delete()
         db.commit()
 
         # 1. OCR & Text Extraction
@@ -68,6 +75,63 @@ def process_document_pipeline(document_id: int):
                     confidence_meaning="Image Laplacian variance and resolution heuristic check",
                     status="open"
                 ))
+
+        # Check whether readable text was extracted or OCR is unavailable/failed
+        has_real_text = bool(
+            full_text
+            and not full_text.startswith("[Scanned page - OCR unavailable]")
+            and not full_text.startswith("[Image Document - OCR unavailable]")
+            and len(full_text.strip()) > 10
+        )
+
+        if not has_real_text:
+            if any(p.get("extraction_method") == "ocr_unavailable" for p in pages_data):
+                doc.processing_status = "failed"
+                doc.processing_stage = "OCR Unavailable"
+                doc.processing_error = "OCR software (Tesseract) is unavailable on host for scanned document. Manual Review Required."
+                doc.validation_status = "unable_to_verify"
+            elif any(p.get("extraction_method") == "tesseract_failed" for p in pages_data):
+                err_msg = next((p.get("error") for p in pages_data if p.get("error")), "Tesseract execution failed.")
+                doc.processing_status = "failed"
+                doc.processing_stage = "OCR Failed"
+                doc.processing_error = f"OCR Failed: {err_msg}. Manual Review Required."
+                doc.validation_status = "unable_to_verify"
+            else:
+                doc.processing_status = "failed"
+                doc.processing_stage = "OCR Unavailable"
+                doc.processing_error = "No readable text detected in uploaded document. Scanned document requires manual review."
+                doc.validation_status = "unable_to_verify"
+
+            db.add(Flag(
+                application_id=doc.application_id,
+                document_id=doc.id,
+                category="quality",
+                severity="warning",
+                title=f"{doc.processing_stage}: {doc.original_filename}",
+                explanation=doc.processing_error,
+                evidence={"pages": len(pages_data), "mime_type": doc.mime_type},
+                confidence=1.0,
+                confidence_meaning="OCR engine capability and text layer inspection",
+                actionability="INTERNAL_REVIEW_ONLY",
+                status="open"
+            ))
+            db.commit()
+
+            elapsed_sec = round(time.time() - start_time, 2)
+            record_audit_event(
+                db=db,
+                action="pipeline_ocr_unavailable",
+                entity_type="document",
+                entity_id=doc.id,
+                actor=None,
+                after_state={
+                    "processing_status": doc.processing_status,
+                    "processing_stage": doc.processing_stage,
+                    "processing_error": doc.processing_error,
+                    "processing_time_sec": elapsed_sec
+                }
+            )
+            return
 
         # 2. Document Classification
         doc.processing_stage = "Identifying Document Type"
@@ -169,8 +233,9 @@ def process_document_pipeline(document_id: int):
                 ))
 
         # 5. Duplicate Detection (Cross-Institution & Intra-Application)
+        # Compare only against prior submitted documents to avoid penalizing earlier original submissions
         candidate_docs_db = db.query(Document).join(Application, Document.application_id == Application.id).filter(
-            Document.id != doc.id,
+            Document.id < doc.id,
             Document.superseded_by.is_(None)
         ).all()
 
@@ -203,18 +268,23 @@ def process_document_pipeline(document_id: int):
         )
 
         for df in dup_flags:
+            matched_id = df["evidence"].get("matched_doc_id")
             exists_dup = db.query(Flag).filter(
-                Flag.document_id == doc.id,
                 Flag.category == "duplicate",
-                Flag.title == df["title"]
+                or_(
+                    and_(Flag.document_id == doc.id, Flag.related_document_id == matched_id),
+                    and_(Flag.document_id == matched_id, Flag.related_document_id == doc.id),
+                    and_(Flag.document_id == doc.id, Flag.title == df["title"])
+                )
             ).first()
             if not exists_dup:
                 db.add(Flag(
                     application_id=doc.application_id,
                     document_id=doc.id,
-                    related_document_id=df["evidence"].get("matched_doc_id"),
+                    related_document_id=matched_id,
                     category="duplicate",
                     severity=df["severity"],
+                    actionability="INTERNAL_REVIEW_ONLY",
                     title=df["title"],
                     explanation=df["explanation"],
                     evidence=df["evidence"],
@@ -227,8 +297,17 @@ def process_document_pipeline(document_id: int):
         # 6. Pipeline Completion
         doc.processing_status = "completed"
         doc.processing_stage = "Completed"
+        doc.processing_error = None
         db.commit()
 
+        # Run downstream validation & completeness sync for this application
+        try:
+            from backend.app.routers.findings import sync_validation_and_consistency
+            sync_validation_and_consistency(doc.application_id, db)
+        except Exception:
+            pass
+
+        elapsed_sec = round(time.time() - start_time, 2)
         record_audit_event(
             db=db,
             action="pipeline_completed",
@@ -238,7 +317,8 @@ def process_document_pipeline(document_id: int):
             after_state={
                 "fields_count": len(extracted_fields_data),
                 "forensic_flags_count": len(forensic_flags),
-                "duplicate_flags_count": len(dup_flags)
+                "duplicate_flags_count": len(dup_flags),
+                "processing_time_sec": elapsed_sec
             }
         )
 
@@ -249,6 +329,8 @@ def process_document_pipeline(document_id: int):
             doc.processing_status = "failed"
             doc.processing_stage = "Failed"
             doc.processing_error = str(e)[:900]
+            doc.validation_status = "unable_to_verify"
             db.commit()
     finally:
-        db.close()
+        if owns_db:
+            db.close()

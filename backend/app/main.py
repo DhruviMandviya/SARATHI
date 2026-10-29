@@ -5,12 +5,35 @@ from contextlib import asynccontextmanager
 
 from backend.app.core.config import settings
 from backend.app.core.database import Base, engine
-from backend.app.routers import auth, applications, documents, findings
+from backend.app.routers import (
+    auth,
+    applications,
+    documents,
+    findings,
+    verification,
+    compliance,
+    admin,
+    reports,
+    decisions,
+    dashboard,
+    audit,
+    notifications,
+    information_requests,
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Ensure database tables exist
     Base.metadata.create_all(bind=engine)
+    from backend.app.core.database import SessionLocal, run_auto_migrations
+    run_auto_migrations(engine)
+    try:
+        from backend.app.services.notice_sync import sync_unpersisted_info_requested_notices
+        db = SessionLocal()
+        sync_unpersisted_info_requested_notices(db)
+        db.close()
+    except Exception as e:
+        print(f"[STARTUP_SYNC_WARN] Notice synchronization: {e}")
     yield
 
 app = FastAPI(
@@ -22,9 +45,18 @@ app = FastAPI(
 )
 
 # CORS configuration
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
+
+cors_origins = list(dict.fromkeys(ALLOWED_ORIGINS + (settings.CORS_ORIGINS or [])))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,8 +81,19 @@ app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(applications.router, prefix=settings.API_V1_STR)
 app.include_router(documents.router, prefix=settings.API_V1_STR)
 app.include_router(findings.router, prefix=settings.API_V1_STR)
+app.include_router(verification.router, prefix=settings.API_V1_STR)
+app.include_router(compliance.router, prefix=settings.API_V1_STR)
+app.include_router(admin.router, prefix=settings.API_V1_STR)
+app.include_router(reports.router, prefix=settings.API_V1_STR)
+app.include_router(decisions.router, prefix=settings.API_V1_STR)
+app.include_router(dashboard.router, prefix=settings.API_V1_STR)
+app.include_router(audit.router, prefix=settings.API_V1_STR)
+app.include_router(notifications.router, prefix=settings.API_V1_STR)
+app.include_router(information_requests.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
+@app.get("/health")
+@app.get(f"{settings.API_V1_STR}/health")
 def health_check():
     return {
         "status": "healthy",

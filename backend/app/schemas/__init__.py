@@ -6,6 +6,14 @@ from backend.app.schemas.verification import VerificationResultOut
 from backend.app.schemas.compliance import ComplianceRuleOut, ComplianceResultOut, ComplianceRuleUpdate
 from backend.app.schemas.decision import DecisionCreate, DecisionOut, DeficiencyLetterOut, DeficiencyLetterUpdate
 from backend.app.schemas.dashboard import DashboardSummary
+from backend.app.schemas.notification import NotificationOut, NotificationListResponse, UnreadCountResponse
+from backend.app.schemas.information_request import (
+    InformationRequestOut,
+    InformationRequestCreate,
+    InformationResponseOut,
+    InformationRequestDetailOut,
+    InformationRequestSummaryCards
+)
 
 __all__ = [
     "Token",
@@ -29,5 +37,13 @@ __all__ = [
     "DecisionOut",
     "DeficiencyLetterOut",
     "DeficiencyLetterUpdate",
-    "DashboardSummary"
+    "DashboardSummary",
+    "NotificationOut",
+    "NotificationListResponse",
+    "UnreadCountResponse",
+    "InformationRequestOut",
+    "InformationRequestCreate",
+    "InformationResponseOut",
+    "InformationRequestDetailOut",
+    "InformationRequestSummaryCards"
 ]

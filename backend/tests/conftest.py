@@ -49,3 +49,36 @@ def client(db_session):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+@pytest.fixture
+def institution_token(client):
+    res = client.post(
+        "/api/v1/auth/login",
+        json={"email": "inst1@aicte.gov.in", "password": "Demo@Password123"}
+    )
+    return res.json()["access_token"]
+
+@pytest.fixture
+def official_token(client):
+    res = client.post(
+        "/api/v1/auth/login",
+        json={"email": "official@aicte.gov.in", "password": "Demo@Password123"}
+    )
+    return res.json()["access_token"]
+
+@pytest.fixture
+def admin_token(client):
+    res = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@aicte.gov.in", "password": "Demo@Password123"}
+    )
+    return res.json()["access_token"]
+
+@pytest.fixture
+def auditor_token(client):
+    res = client.post(
+        "/api/v1/auth/login",
+        json={"email": "auditor@aicte.gov.in", "password": "Demo@Password123"}
+    )
+    return res.json()["access_token"]
+

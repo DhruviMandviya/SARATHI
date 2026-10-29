@@ -12,8 +12,6 @@ export default function HomePage() {
     if (!isLoading) {
       if (!user) {
         router.push("/login");
-      } else if (user.role === "institution") {
-        router.push("/applications");
       } else {
         router.push("/dashboard");
       }
@@ -23,7 +21,7 @@ export default function HomePage() {
   return (
     <div className="flex h-full items-center justify-center p-8">
       <div className="animate-pulse text-sm text-slate-500 font-medium">
-        Loading AICTE Document Verification Platform...
+        Loading SARATHI Regulatory Governance Platform...
       </div>
     </div>
   );

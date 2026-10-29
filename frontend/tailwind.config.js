@@ -9,16 +9,27 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        sarathi: {
+          primary: "#0A4D2E",
+          hover: "#083D24",
+          dark: "#073F2A",
+          darker: "#052E1F",
+          light: "#F0FDF4",
+          surface: "#F0F8F3",
+          border: "#D9E2E7",
+          saffron: "#FF9933",
+          green: "#138808",
+        },
         navy: {
-          900: "#0B132B",
-          850: "#0F1A36",
-          800: "#1C2541",
-          700: "#2B3A67",
+          900: "#073F2A",
+          850: "#052E1F",
+          800: "#0A4D2E",
+          700: "#0D5C3A",
         },
         aicte: {
-          blue: "#1E3A8A",
-          accent: "#2563EB",
-          light: "#EFF6FF",
+          blue: "#0A4D2E",
+          accent: "#0D5C3A",
+          light: "#F0FDF4",
           gold: "#D97706",
           green: "#059669",
           red: "#DC2626",

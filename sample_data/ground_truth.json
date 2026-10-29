@@ -1,0 +1,58 @@
+{
+  "scenario_A": {
+    "description": "Pristine complete application. All mandatory documents valid, active, consistent, and compliant.",
+    "expected_risk_band": "Low",
+    "expected_flags_count": 0,
+    "expected_compliance_outcome": "compliant",
+    "expected_authority_status": "verified"
+  },
+  "scenario_B": {
+    "description": "Missing mandatory document. Fire NOC omitted.",
+    "expected_risk_band": "Medium",
+    "expected_missing_flags": [
+      "missing_fire_noc"
+    ],
+    "expected_deficiency": "Mandatory document Fire NOC missing from submission checklist."
+  },
+  "scenario_C": {
+    "description": "Expired certificate. Fire NOC valid_until 15-01-2023 is lapsed.",
+    "expected_risk_band": "Medium",
+    "expected_expired_flags": [
+      "expired_fire_noc"
+    ]
+  },
+  "scenario_D": {
+    "description": "Land area inconsistency: declared 4.5 acres vs extracted 2.2 acres (> 10% tolerance).",
+    "expected_risk_band": "High",
+    "expected_flags": [
+      "land_area_mismatch"
+    ]
+  },
+  "scenario_E": {
+    "description": "Exact SHA-256 cross-institution duplicate deed detected.",
+    "expected_risk_band": "High",
+    "expected_severity": "critical",
+    "expected_flags": [
+      "cross_institution_duplicate"
+    ]
+  },
+  "scenario_F": {
+    "description": "Image forensic ELA anomaly and digital copy-move splice.",
+    "expected_risk_band": "High",
+    "expected_flags": [
+      "ela_anomaly_detected"
+    ]
+  },
+  "scenario_G": {
+    "description": "Built-up area 2800 sq.m < required 4000 sq.m (Deficit: 1200 sq.m).",
+    "expected_compliance_outcome": "non_compliant"
+  },
+  "scenario_H": {
+    "description": "Simulated authority adapter returns status 'not_verified'.",
+    "expected_authority_status": "not_verified"
+  },
+  "scenario_I": {
+    "description": "Standard affidavit template sharing between two colleges. Downgrades to 'info' severity.",
+    "expected_severity": "info"
+  }
+}

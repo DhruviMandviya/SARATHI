@@ -29,7 +29,7 @@ export function ProcessingStatusRow({ document, onRetry, isRetrying }: Processin
     <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs transition-colors hover:border-slate-300">
       {/* File info */}
       <div className="flex items-start gap-3 min-w-[220px]">
-        <div className="mt-0.5 p-2 rounded-lg bg-blue-50 text-blue-600">
+        <div className="mt-0.5 p-2 rounded-lg bg-[#F0FDF4] text-[#0A4D2E]">
           <FileText className="w-5 h-5" />
         </div>
         <div>
@@ -46,7 +46,7 @@ export function ProcessingStatusRow({ document, onRetry, isRetrying }: Processin
       <div className="flex-1 max-w-md space-y-1.5">
         <div className="flex items-center justify-between text-[11px]">
           <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-            {isProcessing && <Clock className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
+            {isProcessing && <Clock className="w-3.5 h-3.5 text-[#0A4D2E] animate-spin" />}
             {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
             {isFailed && <AlertCircle className="w-3.5 h-3.5 text-red-600" />}
             <span>Stage: {stage}</span>
@@ -62,7 +62,7 @@ export function ProcessingStatusRow({ document, onRetry, isRetrying }: Processin
                 ? "bg-red-500"
                 : isCompleted
                 ? "bg-emerald-500"
-                : "bg-blue-600"
+                : "bg-[#0A4D2E]"
             }`}
             style={{ width: `${progressPct}%` }}
           />
@@ -86,7 +86,7 @@ export function ProcessingStatusRow({ document, onRetry, isRetrying }: Processin
           <button
             onClick={() => onRetry(document.id)}
             disabled={isRetrying}
-            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg border border-blue-200 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-3 py-1 bg-[#F0FDF4] hover:bg-emerald-100 text-[#0A4D2E] font-semibold rounded-lg border border-[#86EFAC] transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? "animate-spin" : ""}`} />
             <span>Retry</span>

@@ -76,8 +76,8 @@ def perform_ela(
 
 def detect_copy_move(image_bgr: np.ndarray) -> Dict[str, Any]:
     """
-    Conservative copy-move detection using ORB keypoint matching.
-    Looks for spatially separated keypoint clusters with identical descriptors.
+    Conservative copy-move detection using ORB keypoint matching with parallel translation binning.
+    Filters out grid lines and standard table borders to avoid false positives on clean documents.
     """
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY) if len(image_bgr.shape) == 3 else image_bgr
     h, w = gray.shape[:2]
@@ -94,46 +94,52 @@ def detect_copy_move(image_bgr: np.ndarray) -> Dict[str, Any]:
     except Exception:
         return {"detected": False, "matched_clusters_count": 0, "regions": []}
 
-    suspicious_pairs = []
+    vector_pairs: Dict[Tuple[float, float], List[Tuple[Any, Any]]] = {}
     for m_list in matches:
         if len(m_list) >= 2:
             m1, m2 = m_list[0], m_list[1]
-            # Ignore self-match
-            if m1.queryIdx == m1.trainIdx:
-                target = m2
-            else:
-                target = m1
+            target = m2 if m1.queryIdx == m1.trainIdx else m1
 
-            # Lowe's ratio test and minimum spatial displacement (at least 40 pixels apart)
             pt1 = keypoints[m1.queryIdx].pt
             pt2 = keypoints[target.trainIdx].pt
-            dist_sq = (pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2
+            dx = pt2[0] - pt1[0]
+            dy = pt2[1] - pt1[1]
+            dist_sq = dx * dx + dy * dy
 
-            if target.distance < 45 and dist_sq > 1600:
-                suspicious_pairs.append((pt1, pt2))
+            # Require close descriptor match, minimum displacement (60px), and ignore pure horizontal/vertical grid borders
+            if target.distance < 25 and dist_sq > 3600:
+                if abs(dy) >= 8 and abs(dx) >= 8:
+                    bin_key = (round(dx / 20) * 20, round(dy / 20) * 20)
+                    if bin_key not in vector_pairs:
+                        vector_pairs[bin_key] = []
+                    vector_pairs[bin_key].append((pt1, pt2))
 
-    # If cluster of matches exists
-    if len(suspicious_pairs) >= 8:
-        # Compute bounding box around matched points
-        all_pts = [p[0] for p in suspicious_pairs] + [p[1] for p in suspicious_pairs]
-        xs = [p[0] for p in all_pts]
-        ys = [p[1] for p in all_pts]
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
+    # Check for rigid parallel translation clusters (true copy-move signature)
+    for bin_key, pairs in vector_pairs.items():
+        if len(pairs) >= 10:
+            all_pts = [p[0] for p in pairs] + [p[1] for p in pairs]
+            xs = [p[0] for p in all_pts]
+            ys = [p[1] for p in all_pts]
+            min_x, max_x = min(xs), max(xs)
+            min_y, max_y = min(ys), max(ys)
+            box_w = max_x - min_x
+            box_h = max_y - min_y
+            box_area = box_w * box_h
 
-        region = {
-            "x": round(min_x / w, 4),
-            "y": round(min_y / h, 4),
-            "width": round((max_x - min_x) / w, 4),
-            "height": round((max_y - min_y) / h, 4)
-        }
-        return {
-            "detected": True,
-            "matched_clusters_count": len(suspicious_pairs),
-            "regions": [region]
-        }
+            if 2000 < box_area < (h * w * 0.45):
+                region = {
+                    "x": round(min_x / w, 4),
+                    "y": round(min_y / h, 4),
+                    "width": round(box_w / w, 4),
+                    "height": round(box_h / h, 4)
+                }
+                return {
+                    "detected": True,
+                    "matched_clusters_count": len(pairs),
+                    "regions": [region]
+                }
 
-    return {"detected": False, "matched_clusters_count": len(suspicious_pairs), "regions": []}
+    return {"detected": False, "matched_clusters_count": 0, "regions": []}
 
 def analyze_image_forensics(
     file_path: str,
@@ -176,8 +182,9 @@ def analyze_image_forensics(
     high_delta_ratio = ela_res["high_delta_ratio"]
     mean_diff = ela_res["mean_diff"]
 
-    # Conservative threshold: only flag if localized anomaly cluster is detected
-    if high_delta_ratio > 0.04 and len(ela_res["suspicious_bboxes"]) > 0:
+    # Conservative threshold: flag if localized anomaly cluster is detected on raster image fixtures
+    is_raster = mime_type in ["image/jpeg", "image/jpg", "image/png"]
+    if is_raster and len(ela_res["suspicious_bboxes"]) > 0 and (high_delta_ratio > 0.002 or ela_res["max_diff"] > 140 or mean_diff > 0.25):
         top_box = ela_res["suspicious_bboxes"][0]
         flags.append({
             "category": "tampering",

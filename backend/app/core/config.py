@@ -4,17 +4,19 @@ from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import json
 
+BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
+
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "AICTE Document Verification System"
+    PROJECT_NAME: str = "SARATHI — AICTE Document Verification System"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "aicte-super-secure-secret-key-change-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     ALGORITHM: str = "HS256"
 
-    DATABASE_URL: str = "sqlite:///./aicte_verifier.db"
+    DATABASE_URL: str = f"sqlite:///{BASE_DIR.as_posix()}/aicte_verifier.db"
 
-    STORAGE_DIR: str = "./storage"
-    DERIVED_DIR: str = "./storage/derived"
+    STORAGE_DIR: str = str(BASE_DIR / "storage")
+    DERIVED_DIR: str = str(BASE_DIR / "storage" / "derived")
     MAX_FILE_SIZE_MB: int = 10
     MAX_PDF_PAGES: int = 20
 
@@ -22,7 +24,12 @@ class Settings(BaseSettings):
     OCR_LANG: str = "eng"
     LLM_EXTRACTION_ENABLED: bool = False
 
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

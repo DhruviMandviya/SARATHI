@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { FlagItem, DocumentItem } from "@/lib/types";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, getApiBase } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { StatusChip } from "@/components/ui/StatusChip";
 import {
@@ -28,19 +28,21 @@ interface FraudSignalsViewProps {
 }
 
 export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewProps) {
-  const { isOfficial } = useAuth();
+  const { isOfficial, token } = useAuth();
   const [flags, setFlags] = useState<FlagItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(
     documents[0]?.id || null
   );
   const [viewMode, setViewMode] = useState<"original" | "ela">("original");
+  const [imageLoading, setImageLoading] = useState<boolean>(true);
+  const [imageError, setImageError] = useState<boolean>(false);
 
   // Dismissing modal state
   const [dismissingFlagId, setDismissingFlagId] = useState<number | null>(null);
   const [dismissReason, setDismissReason] = useState<string>("");
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const apiBase = getApiBase();
 
   const fetchFlags = async () => {
     try {
@@ -57,6 +59,11 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
   useEffect(() => {
     fetchFlags();
   }, [applicationId]);
+
+  useEffect(() => {
+    setImageLoading(true);
+    setImageError(false);
+  }, [selectedDocId, viewMode]);
 
   const handleAcknowledge = async (flagId: number, newStatus: "acknowledged" | "dismissed", reason?: string) => {
     try {
@@ -80,10 +87,10 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
   const duplicateFlags = forensicFlags.filter((f) => f.category === "duplicate");
 
   const originalImageUrl = selectedDocument
-    ? `${apiBase}/documents/${selectedDocument.id}/page/1/image`
+    ? `${apiBase}/documents/${selectedDocument.id}/page/1/image${token ? `?token=${encodeURIComponent(token)}` : ""}`
     : "";
   const elaImageUrl = selectedDocument
-    ? `${apiBase}/documents/${selectedDocument.id}/page/1/image` // ELA heatmap derived file fallback
+    ? `${apiBase}/documents/${selectedDocument.id}/ela${token ? `?token=${encodeURIComponent(token)}` : ""}`
     : "";
 
   if (loading) {
@@ -128,7 +135,7 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
             <select
               value={selectedDocId || ""}
               onChange={(e) => setSelectedDocId(Number(e.target.value))}
-              className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+              className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-[#0A4D2E]"
             >
               {documents.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -147,7 +154,7 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
                   viewMode === "original" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                <ImageIcon className="w-3.5 h-3.5 text-[#0A4D2E]" />
                 <span>Original Document</span>
               </button>
               <button
@@ -166,17 +173,51 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
 
           {/* Document / Heatmap Viewport */}
           <div className="relative border border-slate-200 rounded-xl bg-slate-900/5 min-h-[380px] max-h-[500px] overflow-auto flex items-center justify-center p-4">
-            {selectedDocument ? (
+            {imageLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10 gap-2">
+                <RefreshCw className="w-6 h-6 text-amber-600 animate-spin" />
+                <span className="text-xs text-slate-600 font-semibold">
+                  {viewMode === "ela" ? "Computing ELA Heatmap..." : "Loading Inspection Document..."}
+                </span>
+              </div>
+            )}
+
+            {imageError ? (
+              <div className="p-8 text-center space-y-3 bg-white rounded-xl border border-slate-200 max-w-sm">
+                <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto" />
+                <p className="text-xs font-semibold text-slate-800">
+                  {viewMode === "ela" ? "ELA Heatmap Unavailable" : "Page Thumbnail Unavailable"}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {viewMode === "ela"
+                    ? "Error Level Analysis requires a raster image file (JPEG/PNG) or rendered page."
+                    : "The page image could not be rendered from disk."}
+                </p>
+                {selectedDocument && viewMode === "original" && (
+                  <a
+                    href={`${apiBase}/documents/${selectedDocument.id}/file${token ? `?token=${encodeURIComponent(token)}` : ""}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-3 py-1.5 rounded-lg bg-[#0A4D2E] hover:bg-[#083D24] text-white text-xs font-semibold"
+                  >
+                    Open Original Document &rarr;
+                  </a>
+                )}
+              </div>
+            ) : selectedDocument ? (
               <div className="relative shadow-md max-w-full">
                 <img
-                  src={originalImageUrl}
-                  alt="Inspection Target"
-                  className={`w-full max-h-[460px] object-contain transition-all duration-300 ${
-                    viewMode === "ela" ? "contrast-150 saturate-200 hue-rotate-180" : ""
-                  }`}
+                  src={viewMode === "ela" ? elaImageUrl : originalImageUrl}
+                  alt={viewMode === "ela" ? "ELA Forensic Heatmap" : "Original Document"}
+                  className="w-full max-h-[460px] object-contain transition-all duration-300 block select-none"
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => {
+                    setImageLoading(false);
+                    setImageError(true);
+                  }}
                 />
                 {viewMode === "ela" && (
-                  <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/70 text-amber-300 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">
+                  <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/75 text-amber-300 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm border border-amber-500/30">
                     Heuristic ELA Difference Map
                   </div>
                 )}
@@ -208,10 +249,10 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
             <div className="border-l border-slate-200 pl-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] font-bold text-slate-600">OCR Character Confidence</span>
-                <span className="font-mono font-bold text-blue-700">96%</span>
+                <span className="font-mono font-bold text-[#0A4D2E]">96%</span>
               </div>
               <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                <div className="h-full bg-blue-600 rounded-full w-[96%]" />
+                <div className="h-full bg-[#0A4D2E] rounded-full w-[96%]" />
               </div>
               <span className="text-[10px] text-slate-400 mt-1 block">Independent text extraction certainty</span>
             </div>
@@ -223,7 +264,7 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
           {/* Duplicate Detection Card */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Copy className="w-3.5 h-3.5 text-blue-600" />
+              <Copy className="w-3.5 h-3.5 text-[#0A4D2E]" />
               <span>Duplicate & Template Similarity Analysis</span>
             </h4>
             <p className="text-[11px] text-slate-500">
@@ -237,7 +278,7 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
                 <span>No cross-institution document reuse or duplicate certificates detected.</span>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
                 {duplicateFlags.map((df) => (
                   <div
                     key={df.id}
@@ -246,7 +287,7 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
                         ? "bg-red-50/70 border-red-200"
                         : df.severity === "warning"
                         ? "bg-amber-50/70 border-amber-200"
-                        : "bg-blue-50/70 border-blue-200"
+                        : "bg-[#F0FDF4] border-[#86EFAC]/70"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -269,7 +310,7 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
                       </div>
                       <div>
                         <span className="font-semibold text-slate-500 block">Matched Against:</span>
-                        <span className="font-mono text-blue-700 truncate block">
+                        <span className="font-mono text-[#0A4D2E] truncate block">
                           Doc #{df.evidence?.matched_doc_id}
                           {df.evidence?.is_cross_institution && " (Other Inst.)"}
                         </span>
@@ -343,7 +384,7 @@ export function FraudSignalsView({ applicationId, documents }: FraudSignalsViewP
                           <button
                             onClick={() => handleAcknowledge(flag.id, "dismissed", dismissReason)}
                             disabled={!dismissReason.trim()}
-                            className="px-2.5 py-0.5 bg-blue-600 text-white rounded text-[10px] font-semibold disabled:opacity-50"
+                            className="px-2.5 py-0.5 bg-[#0A4D2E] hover:bg-[#083D24] text-white rounded text-[10px] font-semibold disabled:opacity-50"
                           >
                             Confirm
                           </button>

@@ -10,6 +10,9 @@ class DecisionOut(BaseModel):
     id: int
     application_id: int
     official_id: int
+    official_name: Optional[str] = None
+    issuing_authority: Optional[str] = "AICTE Scrutiny Committee"
+    reference_no: Optional[str] = None
     outcome: str
     remarks: str
     decided_at: datetime

@@ -30,6 +30,15 @@ export default function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlStatus = new URLSearchParams(window.location.search).get("status");
+      if (urlStatus) {
+        setStatusFilter(urlStatus);
+      }
+    }
+  }, []);
+
   const fetchApplications = async () => {
     try {
       setLoading(true);
@@ -65,7 +74,7 @@ export default function ApplicationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Files className="w-5 h-5 text-blue-600" />
+            <Files className="w-5 h-5 text-[#0A4D2E]" />
             <span>{isInstitution ? "My Institution Applications" : "Approval Applications Queue"}</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
@@ -78,7 +87,7 @@ export default function ApplicationsPage() {
         {isInstitution && (
           <Link
             href="/applications/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors shrink-0"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#0A4D2E] hover:bg-[#083D24] text-white font-semibold text-xs rounded-lg shadow-sm transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>New Approval Application</span>
@@ -95,7 +104,7 @@ export default function ApplicationsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by application no, name..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A4D2E]"
           />
         </form>
 
@@ -106,10 +115,10 @@ export default function ApplicationsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0A4D2E]"
             >
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
+              <option value="">{isOfficial ? "Active Scrutiny Queue (Non-Draft)" : "All Statuses"}</option>
+              <option value="draft">Drafts</option>
               <option value="submitted">Submitted</option>
               <option value="processing">Processing</option>
               <option value="under_verification">Under Verification</option>
@@ -125,7 +134,7 @@ export default function ApplicationsPage() {
             <select
               value={riskFilter}
               onChange={(e) => setRiskFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0A4D2E]"
             >
               <option value="">All Risk Bands</option>
               <option value="Low">Low Risk</option>
@@ -173,15 +182,15 @@ export default function ApplicationsPage() {
                   <th className="px-5 py-3.5">Institution</th>
                   <th className="px-5 py-3.5">Type & Academic Year</th>
                   <th className="px-5 py-3.5">Status</th>
-                  <th className="px-5 py-3.5">Risk Score</th>
-                  <th className="px-5 py-3.5">Created Date</th>
+                  {!isInstitution && <th className="px-5 py-3.5">Risk Score</th>}
+                  <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-slate-700">
                 {applications.map((app) => (
                   <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-3.5 font-bold text-blue-700">
+                    <td className="px-5 py-3.5 font-bold text-[#0A4D2E] font-mono">
                       <Link href={`/applications/${app.id}`} className="hover:underline">
                         {app.application_no}
                       </Link>
@@ -196,28 +205,30 @@ export default function ApplicationsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <div>{app.type}</div>
-                      <div className="text-[11px] text-slate-400 font-medium">{app.academic_year}</div>
+                      <div className="font-medium text-slate-800">{app.type}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">{app.academic_year}</div>
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusChip status={app.status} type="application" size="sm" />
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`font-bold px-2 py-0.5 rounded text-xs ${
-                            app.risk_band === "High"
-                              ? "bg-red-100 text-red-800 border border-red-200"
-                              : app.risk_band === "Medium"
-                              ? "bg-amber-100 text-amber-800 border border-amber-200"
-                              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          }`}
-                        >
-                          {app.risk_score.toFixed(1)} / 100
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">({app.risk_band})</span>
-                      </div>
-                    </td>
+                    {!isInstitution && (
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`font-bold px-2 py-0.5 rounded text-xs ${
+                              app.risk_band === "High"
+                                ? "bg-red-100 text-red-800 border border-red-200"
+                                : app.risk_band === "Medium"
+                                ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            }`}
+                          >
+                            {app.risk_score.toFixed(1)} / 100
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">({app.risk_band})</span>
+                        </div>
+                      </td>
+                    )}
                     <td className="px-5 py-3.5 text-slate-500">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -227,10 +238,24 @@ export default function ApplicationsPage() {
                     <td className="px-5 py-3.5 text-right">
                       <Link
                         href={`/applications/${app.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold transition-colors"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+                          isInstitution && app.status === "info_requested"
+                            ? "bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                            : isInstitution && app.status === "draft"
+                            ? "bg-[#0A4D2E] hover:bg-[#083D24] text-white shadow-xs"
+                            : "border border-slate-300 hover:bg-slate-100 text-slate-700"
+                        }`}
                       >
-                        <Eye className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Review</span>
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>
+                          {isInstitution
+                            ? app.status === "info_requested"
+                              ? "Respond"
+                              : app.status === "draft"
+                              ? "Continue Draft"
+                              : "View Dossier"
+                            : "Review"}
+                        </span>
                       </Link>
                     </td>
                   </tr>

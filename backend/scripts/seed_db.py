@@ -144,7 +144,11 @@ def seed_database(db_session=None):
             db.commit()
             print("Seeded compliance rules.")
 
-        # 5. Audit Log Seed Entry
+        # 5. Seed Synthetic Scenarios A-I
+        from backend.scripts.seed_sample_scenarios import seed_sample_scenarios
+        seed_sample_scenarios(db)
+
+        # 6. Audit Log Seed Entry
         db.add(AuditLog(
             actor_id=None,
             actor_role="system",

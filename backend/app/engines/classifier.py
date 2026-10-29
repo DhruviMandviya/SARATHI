@@ -105,7 +105,8 @@ def classify_document(
     final_type = best_type if confidence >= 0.25 else "unknown"
 
     mismatch_flag = None
-    if uploaded_slot and final_type != "unknown" and uploaded_slot != final_type:
+    aliases = {("env_clearance", "environmental_clearance"), ("environmental_clearance", "env_clearance")}
+    if uploaded_slot and final_type != "unknown" and uploaded_slot != final_type and (uploaded_slot, final_type) not in aliases:
         # Check if classifier strongly indicates another document type
         if confidence >= 0.55:
             mismatch_flag = {

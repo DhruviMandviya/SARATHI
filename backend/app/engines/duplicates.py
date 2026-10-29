@@ -1,8 +1,17 @@
+import re
 from typing import List, Dict, Any, Optional, Tuple
 import imagehash
 from rapidfuzz import fuzz
 
-KNOWN_TEMPLATE_DOC_TYPES = ["affidavit", "standard_undertaking"]
+KNOWN_TEMPLATE_DOC_TYPES = [
+    "affidavit",
+    "standard_undertaking",
+    "land_document",
+    "building_plan",
+    "fire_noc",
+    "society_registration",
+    "env_clearance"
+]
 
 def hamming_distance(hash1_str: str, hash2_str: str) -> int:
     try:
@@ -40,7 +49,7 @@ def check_document_duplicates(
 
     for cand in candidate_docs:
         cand_id = cand.get("id")
-        if cand_id == current_doc_id:
+        if not cand_id or cand_id == current_doc_id:
             continue
 
         cand_sha = cand.get("sha256")
@@ -58,7 +67,7 @@ def check_document_duplicates(
         is_near = False
         similarity_pct = 0.0
 
-        # Signal 1: Exact SHA-256 Hash
+        # Signal 1: Exact SHA-256 Cryptographic Hash
         if current_sha and cand_sha and current_sha == cand_sha:
             is_exact = True
             matched_signals.append("Identical SHA-256 cryptographic hash (100% byte match)")
@@ -66,12 +75,23 @@ def check_document_duplicates(
 
         # Signal 2: pHash Visual Similarity (Hamming Distance)
         dist = 999
-        if current_phash and cand_phash:
+        if current_phash and cand_phash and (cand_type == current_type or is_exact):
             dist = hamming_distance(current_phash, cand_phash)
-            if dist <= 8:
+            # Evaluate text similarity between extracted fields
+            cand_fields = candidate_fields_by_doc.get(cand_id, {})
+            t1 = " ".join([str(v) for v in current_fields.values() if v])
+            t2 = " ".join([str(v) for v in cand_fields.values() if v])
+            text_sim = fuzz.token_sort_ratio(t1, t2) if (t1 and t2) else 0.0
+
+            # For near-duplicate visual matching, require meaningful text/content similarity
+            if is_exact:
+                pass
+            elif (dist <= 4 and text_sim >= 65.0) or (dist <= 8 and text_sim >= 80.0) or (dist <= 6 and is_template_type):
                 is_near = True
-                matched_signals.append(f"Visual perceptual hash match (Hamming distance {dist} <= 8)")
-                similarity_pct = max(similarity_pct, round((1.0 - (dist / 64.0)) * 100, 1))
+                matched_signals.append(f"Visual perceptual hash match (Hamming distance {dist} <= 8, text similarity {text_sim:.0f}%)")
+                # Perceptual hash can NEVER be 100% cryptographic match unless SHA-256 matches
+                calculated_pct = round((1.0 - (dist / 64.0)) * 100, 1)
+                similarity_pct = min(98.5, max(similarity_pct, calculated_pct))
 
         if not (is_exact or is_near):
             continue
@@ -83,26 +103,37 @@ def check_document_duplicates(
 
         if is_template_type and cand_type == current_type:
             # Check unique identifying particulars (deponent, institution, reference numbers)
-            unique_identifying_keys = ["institution_name", "deponent_name", "registration_no", "reference_no"]
+            unique_identifying_keys = [
+                "institution_name",
+                "deponent_name",
+                "registration_no",
+                "reference_no",
+                "deed_number",
+                "sanction_no",
+                "noc_number",
+                "survey_number",
+                "order_no"
+            ]
             matching_identifying_count = 0
             distinct_identifying_count = 0
 
             for k in unique_identifying_keys:
-                v1 = current_fields.get(k, "").strip().lower()
-                v2 = cand_fields.get(k, "").strip().lower()
-                if v1 and v2:
+                v1 = re.sub(r"^[^\w]+|[^\w]+$", "", current_fields.get(k, "").strip().lower())
+                v2 = re.sub(r"^[^\w]+|[^\w]+$", "", cand_fields.get(k, "").strip().lower())
+                if len(v1) > 2 and len(v2) > 2:
                     if fuzz.ratio(v1, v2) > 80:
                         matching_identifying_count += 1
                     else:
                         distinct_identifying_count += 1
                         field_differences.append(f"{k.replace('_', ' ')} differs ('{v1}' vs '{v2}')")
 
-            # If not exact file match and identifying particulars differ (or no identifying match):
+            # If not exact file match and identifying particulars differ:
             if not is_exact and (distinct_identifying_count > 0 or matching_identifying_count == 0):
-                # Legitimate shared standard template!
+                # Legitimate shared standard template format - NOT a defect or fraud
                 flags.append({
                     "category": "duplicate",
                     "severity": "info",
+                    "actionability": "INTERNAL_REVIEW_ONLY",
                     "title": f"Standard Statutory Template Format Detected ({current_type.replace('_', ' ').title()})",
                     "explanation": (
                         f"Document shares layout similarity (pHash distance {dist}) with another {current_type} "
@@ -112,6 +143,7 @@ def check_document_duplicates(
                     "evidence": {
                         "current_doc_id": current_doc_id,
                         "matched_doc_id": cand_id,
+                        "doc_pair_key": f"{min(current_doc_id or 0, cand_id)}_{max(current_doc_id or 0, cand_id)}",
                         "match_type": "standard_template",
                         "is_cross_institution": is_cross_institution,
                         "similarity_percentage": similarity_pct,
@@ -125,6 +157,9 @@ def check_document_duplicates(
                 continue
             elif matching_identifying_count > 0 or is_exact:
                 has_shared_particulars = True
+
+        # Normalized pair key
+        pair_key = f"{min(current_doc_id or 0, cand_id)}_{max(current_doc_id or 0, cand_id)}"
 
         # Non-template duplicates or identical content reuse
         if is_cross_institution:
@@ -145,6 +180,7 @@ def check_document_duplicates(
         flags.append({
             "category": "duplicate",
             "severity": severity,
+            "actionability": "INTERNAL_REVIEW_ONLY",
             "title": title,
             "explanation": explanation,
             "evidence": {
@@ -153,6 +189,9 @@ def check_document_duplicates(
                 "matched_doc_id": cand_id,
                 "matched_filename": cand.get("original_filename"),
                 "matched_institution_id": cand_inst_id,
+                "doc_pair_key": pair_key,
+                "pair_key": pair_key,
+                "match_type": "exact_sha256" if is_exact else "visual_phash",
                 "is_cross_institution": is_cross_institution,
                 "similarity_percentage": similarity_pct,
                 "signals": matched_signals

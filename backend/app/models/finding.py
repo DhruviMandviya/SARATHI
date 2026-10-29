@@ -21,6 +21,7 @@ class Flag(Base):
     confidence_meaning = Column(String(255), nullable=False) # deterministic check, heuristic signal strength, etc.
     rule_ref = Column(String(100), nullable=True) # e.g. Rule 4.1.2 or consistency_check_name
     status = Column(String(30), default="open", nullable=False) # open, acknowledged, dismissed
+    actionability = Column(String(50), default="INTERNAL_REVIEW_ONLY", nullable=False) # INTERNAL_REVIEW_ONLY, APPLICANT_CLARIFICATION_REQUIRED, DOCUMENT_REPLACEMENT_REQUIRED, MANDATORY_DOCUMENT_MISSING, AUTHORITY_VERIFICATION_PENDING, RESOLVED, DISMISSED_WITH_REASON
     dismissed_reason = Column(String(500), nullable=True)
     dismissed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

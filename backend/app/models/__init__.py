@@ -7,6 +7,8 @@ from backend.app.models.verification import VerificationResult
 from backend.app.models.compliance import ComplianceRule, ComplianceResult
 from backend.app.models.decision import Decision, DeficiencyLetter
 from backend.app.models.audit import AuditLog
+from backend.app.models.notification import Notification
+from backend.app.models.information_request import InformationRequest, InformationResponse
 
 __all__ = [
     "User",
@@ -21,5 +23,8 @@ __all__ = [
     "ComplianceResult",
     "Decision",
     "DeficiencyLetter",
-    "AuditLog"
+    "AuditLog",
+    "Notification",
+    "InformationRequest",
+    "InformationResponse"
 ]

@@ -15,6 +15,7 @@ import {
   History,
   Settings,
   Building2,
+  Compass,
   LogOut,
   ChevronRight,
 } from "lucide-react";
@@ -27,24 +28,45 @@ export function Sidebar() {
     return null;
   }
 
-  const navItems = [
+  const applicantNavItems = [
     {
       label: "Dashboard",
       href: "/dashboard",
       icon: LayoutDashboard,
-      roles: ["official", "admin", "auditor"],
     },
     {
       label: "New Application",
       href: "/applications/new",
       icon: FilePlus,
-      roles: ["institution"],
     },
     {
       label: "My Applications",
       href: "/applications",
       icon: Files,
-      roles: ["institution"],
+    },
+    {
+      label: "Information Requests",
+      href: "/information-requests",
+      icon: ShieldAlert,
+    },
+    {
+      label: "Reports & Decisions",
+      href: "/reports",
+      icon: FileText,
+    },
+    {
+      label: "Profile / Account",
+      href: "/profile",
+      icon: Settings,
+    },
+  ];
+
+  const officialNavItems = [
+    {
+      label: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
+      roles: ["official", "admin", "auditor"],
     },
     {
       label: "Applications Queue",
@@ -90,27 +112,37 @@ export function Sidebar() {
     },
   ];
 
-  const visibleNav = navItems.filter((item) => item.roles.includes(user.role));
+  const visibleNav =
+    user.role === "institution"
+      ? applicantNavItems
+      : officialNavItems.filter((item) => item.roles.includes(user.role));
 
   return (
-    <aside className="w-64 bg-navy-900 text-slate-200 flex flex-col shrink-0 min-h-screen border-r border-navy-800 shadow-xl">
+    <aside className="w-64 bg-[#E8F3EC] text-[#174D35] flex flex-col shrink-0 min-h-screen border-r border-[#C8DDD0] shadow-sm select-none">
       {/* Brand Header */}
-      <div className="p-5 border-b border-navy-800 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center shadow-md">
-          <Building2 className="w-6 h-6 text-white" />
+      <div className="p-4 border-b border-[#C8DDD0] bg-[#D6E9DC] flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-white border border-[#C8DDD0] flex items-center justify-center p-1 shadow-xs shrink-0">
+          <img
+            src="/assets/aicte_logo.png"
+            alt="AICTE Logo"
+            className="w-full h-full object-contain"
+          />
         </div>
         <div>
-          <div className="font-bold text-white text-base tracking-wide flex items-center gap-1.5">
-            AICTE <span className="text-xs px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-400 font-semibold border border-blue-500/30">MVP</span>
+          <div className="font-black text-[#174D35] text-base tracking-wide flex items-center gap-1.5">
+            SARATHI{" "}
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#C4E3D0] text-[#174D35] font-bold border border-[#A8CEB8]">
+              AICTE
+            </span>
           </div>
-          <div className="text-[11px] text-slate-400 font-medium">Document Decision Support</div>
+          <div className="text-[10px] text-[#39785A] font-semibold tracking-tight">Regulatory Governance</div>
         </div>
       </div>
 
-      {/* Role Pill */}
-      <div className="px-5 py-3 bg-navy-850 border-b border-navy-800/60 flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Workspace</span>
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize bg-blue-900/60 text-blue-300 border border-blue-700/50">
+      {/* Role Pill Strip */}
+      <div className="px-5 py-2.5 bg-[#DDECE2] border-b border-[#C8DDD0] flex items-center justify-between">
+        <span className="text-[11px] uppercase tracking-wider text-[#39785A] font-bold">Workspace</span>
+        <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold capitalize bg-[#C4E3D0] text-[#174D35] border border-[#A8CEB8]">
           {user.role}
         </span>
       </div>
@@ -124,33 +156,33 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm transition-all ${
                 isActive
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-300 hover:bg-navy-800 hover:text-white"
+                  ? "bg-[#C4E3D0] text-[#174D35] font-bold border-l-4 border-[#FF9933] shadow-xs"
+                  : "text-[#174D35] font-medium hover:bg-[#D5E9DC] hover:text-[#0E3524]"
               }`}
             >
               <div className="flex items-center gap-3">
-                <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
+                <Icon className={`w-4 h-4 ${isActive ? "text-[#174D35]" : "text-[#39785A]"}`} />
                 <span>{item.label}</span>
               </div>
-              {isActive && <ChevronRight className="w-4 h-4 text-white/70" />}
+              {isActive && <ChevronRight className="w-4 h-4 text-[#174D35]/80" />}
             </Link>
           );
         })}
       </nav>
 
       {/* User Footer */}
-      <div className="p-4 border-t border-navy-800 bg-navy-850">
+      <div className="p-4 border-t border-[#C8DDD0] bg-[#DCEBE1]">
         <div className="flex items-center justify-between">
           <div className="overflow-hidden pr-2">
-            <p className="text-xs font-semibold text-white truncate">{user.full_name}</p>
-            <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+            <p className="text-xs font-bold text-[#174D35] truncate">{user.full_name}</p>
+            <p className="text-[11px] text-[#39785A] font-medium truncate">{user.email}</p>
           </div>
           <button
             onClick={logout}
             title="Sign out"
-            className="p-2 text-slate-400 hover:text-red-400 hover:bg-navy-800 rounded-lg transition-colors"
+            className="p-2 text-[#39785A] hover:text-rose-700 hover:bg-[#C8DDD0]/60 rounded-lg transition-colors"
           >
             <LogOut className="w-4 h-4" />
           </button>

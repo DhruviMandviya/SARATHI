@@ -21,6 +21,11 @@ class FieldUpdate(BaseModel):
     value: str
     remarks: Optional[str] = None
 
+class OfficialDocumentReviewRequest(BaseModel):
+    outcome: str # verified, mismatch_confirmed, unable_to_verify, pending_review
+    remarks: Optional[str] = None
+    field_name: Optional[str] = None
+
 class DocumentOut(BaseModel):
     id: int
     application_id: int
@@ -36,6 +41,10 @@ class DocumentOut(BaseModel):
     processing_stage: str
     processing_error: Optional[str] = None
     validation_status: str
+    official_verification_status: Optional[str] = "pending_review"
+    official_verification_remarks: Optional[str] = None
+    official_verified_by: Optional[int] = None
+    official_verified_at: Optional[datetime] = None
     uploaded_at: datetime
     superseded_by: Optional[int] = None
     extracted_fields: List[ExtractedFieldOut] = []

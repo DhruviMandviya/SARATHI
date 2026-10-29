@@ -21,14 +21,28 @@ class Document(Base):
     processing_stage = Column(String(100), default="Queued", nullable=False)
     processing_error = Column(String(1000), nullable=True)
 
-    validation_status = Column(String(50), default="valid", nullable=False) # valid, incomplete, expired, mismatch, missing
+    validation_status = Column(String(50), default="valid", nullable=False) # valid, incomplete, expired, mismatch, missing, review_required, not_evaluated
+    official_verification_status = Column(String(50), default="pending_review", nullable=False) # pending_review, verified, mismatch_confirmed, unable_to_verify, more_information_required
+    official_verification_remarks = Column(String(500), nullable=True)
+    official_verified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    official_verified_at = Column(DateTime, nullable=True)
     uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     superseded_by = Column(Integer, ForeignKey("documents.id"), nullable=True)
 
     application = relationship("Application", back_populates="documents")
+    official_verifier = relationship("User", foreign_keys=[official_verified_by])
     extracted_fields = relationship("ExtractedField", back_populates="document", cascade="all, delete-orphan")
     verification_results = relationship("VerificationResult", back_populates="document", cascade="all, delete-orphan")
     flags = relationship("Flag", back_populates="document", cascade="all, delete-orphan", foreign_keys="Flag.document_id")
+
+    @property
+    def extracted_data(self) -> dict:
+        if not self.extracted_fields:
+            return {}
+        return {
+            f.key: (f.edited_value if f.edited_value is not None else f.value)
+            for f in self.extracted_fields
+        }
 
 class ExtractedField(Base):
     __tablename__ = "extracted_fields"

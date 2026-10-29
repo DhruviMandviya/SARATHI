@@ -16,23 +16,50 @@ export function StatusChip({ status, type = "document", size = "md", className =
   let Icon = HelpCircle;
 
   switch (norm) {
-    // Valid / Compliant / Approved / Verified
+    // Complete / Valid / Compliant / Approved / Verified
+    case "complete":
     case "valid":
     case "compliant":
     case "approved":
     case "verified":
       bg = "bg-emerald-50 text-emerald-700 border-emerald-200";
       Icon = CheckCircle2;
-      label = norm === "valid" ? "Valid" : norm === "compliant" ? "Compliant" : norm === "approved" ? "Approved" : "Verified";
+      label = norm === "complete" ? "Complete" : norm === "valid" ? "Complete" : norm === "compliant" ? "Compliant" : norm === "approved" ? "Approved" : "Verified";
       break;
 
-    // Warning / Needs Review / Incomplete / Needs Update / Expired / In Progress
+    // Warning / Needs Review / Incomplete / Needs Update / Expired / In Progress / Requires Correction
     case "needs_review":
     case "incomplete":
     case "warning":
+    case "requires_correction":
+    case "more_information_required":
       bg = "bg-amber-50 text-amber-700 border-amber-200";
       Icon = AlertTriangle;
-      label = norm === "needs_review" ? "Needs Review" : norm === "incomplete" ? "Incomplete" : "Warning";
+      label = (norm === "requires_correction" || norm === "more_information_required")
+        ? "Requires Correction"
+        : norm === "needs_review"
+        ? "Needs Review"
+        : norm === "incomplete"
+        ? "Incomplete"
+        : "Warning";
+      break;
+
+    case "unable_to_verify":
+      bg = "bg-slate-100 text-slate-700 border-slate-300";
+      Icon = AlertTriangle;
+      label = "Unable to Verify";
+      break;
+
+    case "pending_processing":
+      bg = "bg-slate-100 text-slate-700 border-slate-200";
+      Icon = Clock;
+      label = "Pending Processing";
+      break;
+
+    case "pending_review":
+      bg = "bg-slate-100 text-slate-600 border-slate-200";
+      Icon = Clock;
+      label = "Pending Review";
       break;
 
     case "needs_update":
@@ -49,21 +76,23 @@ export function StatusChip({ status, type = "document", size = "md", className =
 
     case "pending":
     case "in_progress":
-      // Neutral tone for pending / in_progress - never alarming
-      bg = "bg-blue-50 text-blue-700 border-blue-200";
+      // Restrained tone for pending / in_progress
+      bg = "bg-slate-100 text-slate-700 border-slate-200";
       Icon = Clock;
       label = norm === "pending" ? "Pending Verification" : "In Progress";
       break;
 
-    // Critical / Non-Compliant / Rejected / Mismatch / Missing / Not Verified
+    // Critical / Non-Compliant / Rejected / Mismatch / Missing / Not Verified / Invalid
     case "critical":
     case "non_compliant":
     case "rejected":
+    case "mismatch_confirmed":
     case "missing":
     case "not_verified":
+    case "invalid":
       bg = "bg-red-50 text-red-700 border-red-200";
       Icon = XCircle;
-      label = norm === "non_compliant" ? "Non-Compliant" : norm === "critical" ? "Critical" : norm === "rejected" ? "Rejected" : norm === "missing" ? "Missing" : "Not Verified";
+      label = norm === "invalid" ? "Invalid" : norm === "non_compliant" ? "Non-Compliant" : norm === "critical" ? "Critical" : (norm === "rejected" || norm === "mismatch_confirmed") ? "Rejected" : norm === "missing" ? "Missing" : "Not Verified";
       break;
 
     case "mismatch":
@@ -73,13 +102,13 @@ export function StatusChip({ status, type = "document", size = "md", className =
       break;
 
     case "info":
-      bg = "bg-sky-50 text-sky-700 border-sky-200";
+      bg = "bg-slate-100 text-slate-700 border-slate-200";
       Icon = HelpCircle;
       label = "Info";
       break;
 
     case "under_verification":
-      bg = "bg-indigo-50 text-indigo-700 border-indigo-200";
+      bg = "bg-[#F0FDF4] text-[#0A4D2E] border-[#86EFAC]";
       Icon = Clock;
       label = "Under Verification";
       break;

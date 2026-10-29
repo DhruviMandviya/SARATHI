@@ -37,7 +37,14 @@ def sync_validation_and_consistency(application_id: int, db: Session):
         Document.superseded_by.is_(None)
     ).all()
     doc_dicts = [
-        {"id": d.id, "doc_type": d.doc_type, "page_count": d.page_count, "superseded_by": d.superseded_by}
+        {
+            "id": d.id,
+            "doc_type": d.doc_type,
+            "page_count": d.page_count,
+            "superseded_by": d.superseded_by,
+            "processing_status": d.processing_status,
+            "processing_error": d.processing_error
+        }
         for d in docs
     ]
 
@@ -78,7 +85,13 @@ def sync_validation_and_consistency(application_id: int, db: Session):
     )
     all_new_flags.extend(cons_flags)
 
-    # 3. Save new flags to database if not already present
+    # 3. Clean up previously generated validation/consistency flags for this application
+    db.query(Flag).filter(
+        Flag.application_id == app.id,
+        Flag.category.in_(["missing", "incomplete", "expired", "mismatch"])
+    ).delete()
+
+    # 4. Save new flags to database
     for f in all_new_flags:
         existing = db.query(Flag).filter(
             Flag.application_id == app.id,
@@ -140,7 +153,11 @@ def get_validation_results(
             "document_id": doc.id if doc else None,
             "original_filename": doc.original_filename if doc else None,
             "validation_status": doc.validation_status if doc else ("missing" if item.mandatory else "not_uploaded"),
-            "processing_status": doc.processing_status if doc else None
+            "processing_status": doc.processing_status if doc else None,
+            "official_verification_status": getattr(doc, "official_verification_status", None) if doc else None,
+            "official_verification_remarks": getattr(doc, "official_verification_remarks", None) if doc else None,
+            "official_verified_by": getattr(doc, "official_verified_by", None) if doc else None,
+            "official_verified_at": doc.official_verified_at.isoformat() if (doc and getattr(doc, "official_verified_at", None)) else None,
         })
 
     return {
